@@ -1,0 +1,2624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI文献筛选平台 - 本地模型版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: center;
+            padding: 0 20px;
+            margin-bottom: 10px;
+        }
+
+        .btn-tutorial {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-tutorial:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: white;
+            transform: translateY(-2px);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        /* 三栏布局 */
+        .main-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            max-width: 1700px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
+        .left-panel, .right-panel {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        .center-panel {
+            width: 800px;
+            min-width: 800px;
+            max-width: 800px;
+            height: auto;
+            overflow-y: visible;
+        }
+        
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* ===== 左侧：模型库 ===== */
+        .left-panel {
+            width: 400px;
+            min-width: 400px;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+        
+        .ollama-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+        
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        
+        .model-category {
+            margin-bottom: 20px;
+        }
+        
+        .category-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .category-title::before {
+            content: '';
+            width: 3px;
+            height: 14px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+        
+        .model-list-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .model-item-vertical {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.25s;
+            border: 2px solid transparent;
+        }
+        
+        .model-item-vertical:hover {
+            background: #f0f4ff;
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+        
+        .model-item-vertical.installed {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+            border-color: #10b981;
+        }
+        
+        .model-item-vertical.selected {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%);
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+        
+        .model-thumb {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .model-info-compact {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .model-name-compact {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .model-meta-compact {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 2px;
+        }
+        
+        .model-check {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #10b981;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .drawer-toggle {
+            width: 100%;
+            padding: 10px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            color: #666;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+        
+        .drawer-toggle:hover {
+            background: #e0e0e0;
+            color: #667eea;
+        }
+        
+        .hidden-models {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        
+        .hidden-models.expanded {
+            max-height: 2000px;
+        }
+        
+        /* ===== 中间：主操作区 ===== */
+        .center-panel {
+            width: 720px;
+            min-width: 720px;
+            max-width: 720px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-sizing: border-box;
+        }
+        
+        .section-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        
+        .step-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        input[type="file"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        input[type="file"]:hover,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #555;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 12px;
+        }
+        
+        .preview-table th,
+        .preview-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .preview-table th {
+            background: #f0f0f0;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .text-truncate {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        /* ===== 右侧：运行动态 ===== */
+        .right-panel {
+            width: 400px;
+            min-width: 400px;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .stats-grid-total {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 8px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-card.yes {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+        }
+        
+        .stat-card.no {
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+        }
+        
+        .stat-card.unknown {
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+        }
+        
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        
+        .progress-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 16px;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .progress-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .progress-percent {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            border-radius: 5px;
+        }
+        
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .current-paper {
+            background: #f0f4ff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        
+        .current-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .current-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .log-section {
+            flex: 1;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            min-height: 0;
+        }
+        
+        .log-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px;
+            margin-bottom: 6px;
+            background: white;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .log-index {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .log-yes {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .log-no {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .log-title {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #333;
+            min-width: 0;
+        }
+        
+        .log-result {
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        
+        .result-yes {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .result-no {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .result-unknown {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .log-unknown {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .btn-expand {
+            background: #f0f0f0;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .btn-expand:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .log-details {
+            width: 100%;
+            margin-top: 8px;
+            display: none;
+            box-sizing: border-box;
+        }
+
+        .log-details.expanded {
+            display: block;
+        }
+
+        .log-details-content {
+            color: #333;
+            font-size: 0.75rem;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        .log-item.analyzing {
+            background: #fffbeb;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .log-item.analyzing .log-index {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        .log-result.analyzing {
+            background: #fef3c7;
+            color: #92400e;
+            font-style: italic;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .download-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* 模型下载进度 */
+        .download-progress-vertical {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f0f4ff;
+            border-radius: 8px;
+        }
+        
+        .download-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        
+        /* AI平台按钮网格 */
+        .ai-platform-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        /* 提示词模板框 */
+        .prompt-template-box {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .prompt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .btn-copy-small {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-copy-small:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .btn-copy-small.copied {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        
+        .prompt-content {
+            padding: 16px;
+            margin: 0;
+            font-family: 'Courier New', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #fff;
+        }
+        
+        .prompt-content:empty::before,
+        .prompt-content.placeholder {
+            color: #999;
+            font-style: italic;
+        }
+        
+        .btn-platform {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 8px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+            color: #667eea;
+        }
+        
+        .btn-platform:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+        
+        .btn-platform:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .platform-icon {
+            font-size: 1.6rem;
+            margin-bottom: 4px;
+        }
+        
+        .platform-name {
+            font-size: 0.8rem;
+        }
+        
+        /* 统一悬停样式 */
+        .btn-platform:hover:not(:disabled) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        /* 教程模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transform: translateY(-20px);
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: calc(85vh - 80px);
+        }
+
+        .tutorial-section {
+            margin-bottom: 24px;
+        }
+
+        .tutorial-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .tutorial-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tutorial-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tutorial-step {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-content h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 16px;
+            border-left: 3px solid #667eea;
+        }
+
+        .feature-card h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            font-size: 0.8rem;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .workflow-diagram {
+            background: linear-gradient(135deg, #f0f4ff 0%, #f8f9fa 100%);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .workflow-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .workflow-item {
+            background: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #e0e0e0;
+        }
+
+        .workflow-arrow {
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .workflow-flow {
+                flex-direction: column;
+            }
+
+            .workflow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 1600px) {
+            .main-container {
+                grid-template-columns: 400px 720px 400px;
+                overflow-x: auto;
+            }
+        }
+
+        /* ===== AI交互抽屉 ===== */
+        .ai-interaction-drawer {
+            position: fixed;
+            right: -600px;
+            top: 0;
+            width: 600px;
+            height: 100vh;
+            background: white;
+            box-shadow: -5px 0 30px rgba(0,0,0,0.2);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ai-interaction-drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .drawer-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drawer-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drawer-close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+
+        .drawer-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .interaction-item {
+            margin-bottom: 20px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .interaction-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .interaction-paper-id {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .interaction-type {
+            font-weight: 500;
+        }
+
+        .interaction-type.send {
+            color: #667eea;
+        }
+
+        .interaction-type.receive {
+            color: #10b981;
+        }
+
+        .interaction-time {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        .interaction-content {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+
+        .interaction-item.receive .interaction-content {
+            border-left-color: #10b981;
+        }
+
+        .interaction-label {
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .interaction-text {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .interaction-text.streaming {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .drawer-toggle-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 100px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .drawer-toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .drawer-toggle-btn .badge {
+            background: #ef4444;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .drawer-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .drawer-actions {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .drawer-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .drawer-btn:hover {
+            background: #f3f4f6;
+        }
+
+        .drawer-btn.primary {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .drawer-btn.primary:hover {
+            background: #5a67d8;
+        }
+
+        @media (max-width: 1400px) {
+            .main-container {
+                grid-template-columns: 400px 720px 400px;
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 400px 720px 400px;
+                overflow-x: auto;
+            }
+
+            .left-panel,
+            .right-panel {
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .ai-platform-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header-top {
+                justify-content: center;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-top">
+            <button class="btn btn-tutorial" onclick="showTutorial()">
+                使用教程
+            </button>
+        </div>
+        <h1>AI文献筛选平台</h1>
+        <p>本地轻量化运行，数据隐私保护</p>
+    </div>
+    
+    <div class="main-container">
+        <!-- 左侧：模型库 -->
+        <div class="panel left-panel">
+            <div class="panel-title">
+                <span>📚</span> 本地模型库
+            </div>
+            
+            <div class="model-hint" style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 10px 12px; margin-bottom: 12px; border-radius: 8px; font-size: 0.8rem; color: #555;">
+                <span style="font-weight: 600; color: #667eea;">💡 提示：</span>模型大小(B)小于运行内存大小 × 2/3 为宜
+            </div>
+            
+            <div id="ollamaStatus" class="ollama-status status-stopped">
+                <span class="status-dot"></span>
+                <span id="statusText">检查中...</span>
+            </div>
+            
+            <div id="modelSection">
+                <!-- 已安装模型 -->
+                <div class="model-category">
+                    <div class="category-title">已安装</div>
+                    <div id="installedModelsList" class="model-list-vertical">
+                        <p style="color: #999; font-size: 0.85rem;">暂无已安装模型</p>
+                    </div>
+                </div>
+                
+                <!-- 可选模型 -->
+                <div class="model-category">
+                    <div class="category-title">可选下载</div>
+                    <div id="recommendedModelsList" class="model-list-vertical">
+                        <!-- 动态填充 -->
+                    </div>
+                    <button class="drawer-toggle" id="drawerBtn" onclick="toggleModelDrawer()">
+                        查看更多模型 ▼
+                    </button>
+                    <div id="hiddenModelsList" class="hidden-models">
+                        <!-- 动态填充更多模型 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="ollamaNotRunning" class="alert alert-error hidden">
+                请先安装并启动Ollama服务<br>
+                <code style="font-size: 0.8rem;">ollama serve</code>
+            </div>
+            
+            <!-- 下载进度 -->
+            <div id="downloadProgressVertical" class="download-progress-vertical hidden">
+                <div class="download-label" id="downloadLabel">下载中...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="modelDownloadProgress" style="width: 0%"></div>
+                </div>
+                <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" id="cancelDownloadBtn" onclick="cancelDownload()">
+                    取消下载
+                </button>
+            </div>
+        </div>
+        
+        <!-- 中间：主操作区 -->
+        <div class="panel center-panel">
+            <!-- 步骤1：上传文件 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="step-badge">1</div>
+                    <div class="section-title">上传PubMed文献文件</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>选择文献文件（支持PubMed导出的.txt文件或Excel文件）</label>
+                    <input type="file" id="fileInput" accept=".txt,.xlsx,.xls" onchange="uploadFile()">
+                    <div style="font-size: 0.8rem; color: #888; margin-top: 6px;">
+                        支持格式：PubMed MEDLINE (.txt) | Excel (.xlsx, .xls)
+                    </div>
+                </div>
+
+                <div id="uploadResult"></div>
+                
+                <div id="previewSection" class="hidden" style="margin-top: 16px;">
+                    <label style="font-size: 0.85rem; color: #666;">文献预览</label>
+                    <div style="overflow-x: auto; max-height: 240px; overflow-y: auto;">
+                        <table class="preview-table" id="previewTable">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 步骤2：设置筛选标准 -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="step-badge">2</div>
+                    <div class="section-title">设置筛选标准</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>选择分析模型</label>
+                    <select id="selectedModel">
+                        <option value="">请先安装模型</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>输入筛选标准</label>
+                    <textarea id="userCriteria" placeholder="例如：&#10;- 研究必须是随机对照试验&#10;- 研究对象必须是成年人&#10;- 排除动物实验" oninput="generateFullPrompt()"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>完整的AI优化提示词（复制以下内容到AI平台）</label>
+                    <div class="prompt-template-box" id="promptTemplateBox">
+                        <div class="prompt-header">
+                            <span>📋 优化提示词模板</span>
+                            <button class="btn-copy-small" onclick="copyFullPrompt()">一键复制</button>
+                        </div>
+                        <pre id="fullPromptText" class="prompt-content">请先在上方的"输入筛选标准"框中输入您的筛选标准...</pre>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>选择AI平台打开（粘贴上方提示词）</label>
+                    <div class="ai-platform-grid">
+                        <button class="btn btn-platform doubao" onclick="openAIPlatform('doubao')" id="btnDoubao">
+                            <span class="platform-name">豆包</span>
+                        </button>
+                        <button class="btn btn-platform zhipu" onclick="openAIPlatform('zhipu')" id="btnZhipu">
+                            <span class="platform-name">智谱清言</span>
+                        </button>
+                        <button class="btn btn-platform deepseek" onclick="openAIPlatform('deepseek')" id="btnDeepseek">
+                            <span class="platform-name">DeepSeek</span>
+                        </button>
+                        <button class="btn btn-platform kimi" onclick="openAIPlatform('kimi')" id="btnKimi">
+                            <span class="platform-name">Kimi</span>
+                        </button>
+                        <button class="btn btn-platform qwen" onclick="openAIPlatform('qwen')" id="btnQwen">
+                            <span class="platform-name">通义千问</span>
+                        </button>
+                        <button class="btn btn-platform yiyan" onclick="openAIPlatform('yiyan')" id="btnYiyan">
+                            <span class="platform-name">文心一言</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 16px;">
+                    <label>AI优化后的筛选标准（粘贴外部AI的回复）</label>
+                    <textarea id="enhancedPrompt" placeholder="将豆包/智谱等AI优化后的筛选标准粘贴到这里...
+
+优化后的标准应该：
+- 比原始描述更专业清晰
+- 使用准确的学术术语
+- 逻辑结构明确
+- 易于AI理解判断"></textarea>
+                </div>
+                
+                <!-- 操作按钮组 -->
+                <div class="action-buttons">
+                    <button class="btn btn-success" onclick="startAnalysis()" id="analyzeBtn" disabled>
+                        <span>▶</span> 开始分析
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportWithoutAnalysis()" id="exportBtn" disabled>
+                        <span>📥</span> 不分析导出Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧：运行动态 -->
+        <div class="panel right-panel">
+            <div class="panel-title">
+                <span>📊</span> 运行动态
+            </div>
+            
+            <!-- 统计卡片 -->
+            <div class="stats-grid-total">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalCount">0</div>
+                    <div class="stat-label">总计</div>
+                </div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card yes">
+                    <div class="stat-number" id="yesCount">0</div>
+                    <div class="stat-label">符合</div>
+                </div>
+                <div class="stat-card no">
+                    <div class="stat-number" id="noCount">0</div>
+                    <div class="stat-label">不符合</div>
+                </div>
+                <div class="stat-card unknown">
+                    <div class="stat-number" id="unknownCount">0</div>
+                    <div class="stat-label">未知</div>
+                </div>
+            </div>
+            
+            <!-- 分析进度 -->
+            <div class="progress-section">
+                <div class="progress-header">
+                    <span class="progress-title">分析进度</span>
+                    <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="analysisProgressBar" style="width: 0%"></div>
+                </div>
+                <div class="progress-info">
+                    <span id="currentIndex">0 / 0</span>
+                    <span id="etaText">等待开始...</span>
+                </div>
+                <div id="currentPaperInfo" class="current-paper hidden">
+                    <div class="current-label">当前分析</div>
+                    <div class="current-title" id="currentPaperTitle">-</div>
+                </div>
+            </div>
+            
+            <!-- 实时日志 -->
+            <div class="log-section" id="logSection">
+                <div class="category-title" style="margin-bottom: 10px;">实时日志</div>
+                <div id="logContainer">
+                    <p style="color: #999; font-size: 0.8rem; text-align: center;">等待开始分析...</p>
+                </div>
+            </div>
+            
+            <!-- 下载结果 -->
+            <div id="downloadSection" class="download-section hidden">
+                <button class="btn btn-success" style="width: 100%;" onclick="downloadResult()">
+                    <span>📥</span> 下载筛选结果
+                </button>
+                <input type="hidden" id="resultDownloadUrl" value="">
+            </div>
+        </div>
+    </div>
+
+    <!-- 教程模态框 -->
+    <div id="tutorialModal" class="modal-overlay" onclick="closeTutorial(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title">使用教程</div>
+                <button class="modal-close" onclick="closeTutorial()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 工作流程 -->
+                <div class="tutorial-section">
+                    <div class="tutorial-title">整体工作流程</div>
+                    <div class="workflow-diagram">
+                        <div class="workflow-flow">
+                            <div class="workflow-item">1. 上传PubMed文件</div>
+                            <span class="workflow-arrow">&rarr;</span>
+                            <div class="workflow-item">2. 设置筛选标准</div>
+                            <span class="workflow-arrow">&rarr;</span>
+                            <div class="workflow-item">3. 外部AI优化</div>
+                            <span class="workflow-arrow">&rarr;</span>
+                            <div class="workflow-item">4. 本地AI分析</div>
+                            <span class="workflow-arrow">&rarr;</span>
+                            <div class="workflow-item">5. 导出结果</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 详细步骤 -->
+                <div class="tutorial-section">
+                    <div class="tutorial-title">详细操作步骤</div>
+                    <div class="tutorial-steps">
+                        <div class="tutorial-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>上传PubMed文献文件</h4>
+                                <p>从PubMed导出文献库为txt格式（MEDLINE格式），点击"解析文献"按钮上传文件。系统会自动提取标题、摘要、关键词、国家、日期、作者等信息。</p>
+                            </div>
+                        </div>
+                        <div class="tutorial-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>选择本地AI模型</h4>
+                                <p>在左侧模型库中查看已安装的模型，或下载推荐模型。然后在中间面板选择要用于筛选的模型。</p>
+                            </div>
+                        </div>
+                        <div class="tutorial-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>输入筛选标准</h4>
+                                <p>在"设置筛选标准"区域输入您的筛选条件，如研究类型、人群特征、排除标准等。系统会自动生成优化提示词。</p>
+                            </div>
+                        </div>
+                        <div class="tutorial-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h4>使用外部AI优化提示词</h4>
+                                <p>点击"一键复制"复制优化后的提示词，然后选择豆包、智谱清言等AI平台打开，粘贴提示词获取更专业的筛选标准描述。</p>
+                            </div>
+                        </div>
+                        <div class="tutorial-step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <h4>粘贴优化结果并开始分析</h4>
+                                <p>将外部AI优化后的筛选标准粘贴到"AI优化后的筛选标准"文本框中，点击"开始分析"按钮，本地AI将批量处理所有文献。</p>
+                            </div>
+                        </div>
+                        <div class="tutorial-step">
+                            <div class="step-number">6</div>
+                            <div class="step-content">
+                                <h4>查看结果并导出</h4>
+                                <p>右侧运行动态面板实时显示分析进度和统计结果。分析完成后，点击"下载筛选结果"导出包含筛选结果的Excel文件。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 板块功能介绍 -->
+                <div class="tutorial-section">
+                    <div class="tutorial-title">各板块功能介绍</div>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <h4>左侧：模型库</h4>
+                            <p>展示已安装的本地模型和推荐下载的模型。点击模型可选择用于分析，点击下载按钮可下载新模型。</p>
+                        </div>
+                        <div class="feature-card">
+                            <h4>中间：操作区</h4>
+                            <p>包含文件上传、筛选标准设置、AI平台选择和操作按钮。是主要的工作区域。</p>
+                        </div>
+                        <div class="feature-card">
+                            <h4>右侧：运行动态</h4>
+                            <p>实时显示分析统计（总计/符合/不符合）、进度条、当前分析文献标题和分析日志。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 注意事项 -->
+                <div class="tutorial-section">
+                    <div class="tutorial-title">使用须知</div>
+                    <div class="tutorial-steps">
+                        <div class="tutorial-step">
+                            <div class="step-number">!</div>
+                            <div class="step-content">
+                                <h4>Ollama服务</h4>
+                                <p>使用前请确保已安装Ollama并运行服务（命令：ollama serve）。所有AI分析均在本地完成，数据不会上传到云端。</p>
+                            </div>
+                        </div>
+                        <div class="tutorial-step">
+                            <div class="step-number">!</div>
+                            <div class="step-content">
+                                <h4>模型选择建议</h4>
+                                <p>推荐使用qwen2.5:7b或qwen2.5:14b模型，在准确率和速度之间取得平衡。较大的模型准确率更高但速度较慢。</p>
+                            </div>
+                        </div>
+                        <div class="tutorial-step">
+                            <div class="step-number">!</div>
+                            <div class="step-content">
+                                <h4>外部AI优化</h4>
+                                <p>外部AI（豆包等）仅用于优化提示词的语言表达，实际的文献筛选判断由本地AI完成，确保数据隐私。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentModels = [];
+        let installedModelNames = [];
+        let allModelLibrary = [];
+        let selectedModelName = '';
+        let parsedRecords = [];
+        let analysisResults = [];
+        let isAnalyzing = false;
+        let downloadAbortController = null;
+        let isDownloading = false;
+
+        // 页面加载
+        window.onload = function() {
+            checkOllamaStatus();
+        };
+
+        // 显示教程
+        function showTutorial() {
+            document.getElementById('tutorialModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭教程
+        function closeTutorial(event) {
+            if (!event || event.target.id === 'tutorialModal' || event.target.classList.contains('modal-close')) {
+                document.getElementById('tutorialModal').classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // ESC键关闭教程
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeTutorial();
+            }
+        });
+
+        async function checkOllamaStatus() {
+            try {
+                const response = await fetch('/api/ollama_status');
+                const data = await response.json();
+                
+                const statusBadge = document.getElementById('ollamaStatus');
+                const statusText = document.getElementById('statusText');
+                const notRunningMsg = document.getElementById('ollamaNotRunning');
+                const modelSection = document.getElementById('modelSection');
+                
+                if (data.running) {
+                    statusBadge.className = 'ollama-status status-running';
+                    statusText.textContent = '运行中';
+                    notRunningMsg.classList.add('hidden');
+                    modelSection.classList.remove('hidden');
+                    
+                    currentModels = data.models || [];
+                    installedModelNames = currentModels.map(m => m.name);
+                    allModelLibrary = data.recommended || [];
+                    
+                    renderModelLists();
+                    updateModelSelect();
+                } else {
+                    statusBadge.className = 'ollama-status status-stopped';
+                    statusText.textContent = '未运行';
+                    notRunningMsg.classList.remove('hidden');
+                    modelSection.classList.add('hidden');
+                }
+            } catch (error) {
+                document.getElementById('statusText').textContent = '连接失败';
+                document.getElementById('ollamaNotRunning').classList.remove('hidden');
+            }
+        }
+
+        function getModelInitials(name) {
+            const parts = name.split(':');
+            const family = parts[0].replace(/\d/g, '').substring(0, 3).toUpperCase();
+            const version = parts[1] || '';
+            const numMatch = version.match(/(\d+)/);
+            return family + (numMatch ? numMatch[1] : '');
+        }
+
+        function renderModelLists() {
+            // 已安装模型
+            const installedContainer = document.getElementById('installedModelsList');
+            if (currentModels.length === 0) {
+                installedContainer.innerHTML = '<p style="color: #999; font-size: 0.85rem;">暂无已安装模型</p>';
+            } else {
+                installedContainer.innerHTML = currentModels.map(model => `
+                    <div class="model-item-vertical installed ${selectedModelName === model.name ? 'selected' : ''}" 
+                         onclick="selectModel('${model.name}')">
+                        <div class="model-thumb">${getModelInitials(model.name)}</div>
+                        <div class="model-info-compact">
+                            <div class="model-name-compact">${model.name}</div>
+                            <div class="model-meta-compact">${formatSize(model.size)}</div>
+                        </div>
+                        <div class="model-check">✓</div>
+                    </div>
+                `).join('');
+            }
+            
+            // 推荐模型（前5个未安装）
+            const recommendedContainer = document.getElementById('recommendedModelsList');
+            const notInstalled = allModelLibrary.filter(m => !installedModelNames.includes(m.name));
+            const visibleModels = notInstalled.slice(0, 5);
+            
+            recommendedContainer.innerHTML = visibleModels.map(model => `
+                <div class="model-item-vertical" onclick="downloadModel('${model.name}')">
+                    <div class="model-thumb">${getModelInitials(model.name)}</div>
+                    <div class="model-info-compact">
+                        <div class="model-name-compact">${model.name}</div>
+                        <div class="model-meta-compact">${model.size} ⬇</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // 隐藏模型
+            const hiddenContainer = document.getElementById('hiddenModelsList');
+            const hiddenModels = notInstalled.slice(5);
+            
+            if (hiddenModels.length > 0) {
+                hiddenContainer.innerHTML = hiddenModels.map(model => `
+                    <div class="model-item-vertical" onclick="downloadModel('${model.name}')">
+                        <div class="model-thumb">${getModelInitials(model.name)}</div>
+                        <div class="model-info-compact">
+                            <div class="model-name-compact">${model.name}</div>
+                            <div class="model-meta-compact">${model.size} ⬇</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function toggleModelDrawer() {
+            const hiddenList = document.getElementById('hiddenModelsList');
+            const btn = document.getElementById('drawerBtn');
+            
+            if (hiddenList.classList.contains('expanded')) {
+                hiddenList.classList.remove('expanded');
+                btn.textContent = '查看更多模型 ▼';
+            } else {
+                hiddenList.classList.add('expanded');
+                btn.textContent = '收起 ▲';
+            }
+        }
+
+        function selectModel(modelName) {
+            selectedModelName = modelName;
+            renderModelLists();
+            
+            const select = document.getElementById('selectedModel');
+            select.value = modelName;
+        }
+
+        function updateModelSelect() {
+            const select = document.getElementById('selectedModel');
+            
+            // 更新分析按钮状态
+            if (currentModels.length === 0) {
+                select.innerHTML = '<option value="">请先安装模型</option>';
+                document.getElementById('analyzeBtn').disabled = true;
+            } else {
+                select.innerHTML = currentModels.map(m => 
+                    `<option value="${m.name}">${m.name}</option>`
+                ).join('');
+                
+                if (parsedRecords.length > 0) {
+                    document.getElementById('analyzeBtn').disabled = false;
+                    document.getElementById('exportBtn').disabled = false;
+                }
+            }
+            
+
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化提示词生成
+            generateFullPrompt();
+        });
+
+        async function downloadModel(modelName) {
+            const progressDiv = document.getElementById('downloadProgressVertical');
+            const progressBar = document.getElementById('modelDownloadProgress');
+            const downloadLabel = document.getElementById('downloadLabel');
+            const cancelBtn = document.getElementById('cancelDownloadBtn');
+            
+            // 如果正在下载，先取消
+            if (isDownloading && downloadAbortController) {
+                downloadAbortController.abort();
+            }
+            
+            // 创建新的AbortController
+            downloadAbortController = new AbortController();
+            isDownloading = true;
+            
+            progressDiv.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            downloadLabel.textContent = `正在下载 ${modelName}...`;
+            cancelBtn.textContent = '取消下载';
+            cancelBtn.disabled = false;
+            
+            try {
+                const response = await fetch('/api/pull_model', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: modelName }),
+                    signal: downloadAbortController.signal
+                });
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(l => l.trim());
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                console.log('[下载进度]', data);  // 调试日志
+                                
+                                if (data.status === 'downloading') {
+                                    progressBar.style.width = data.progress + '%';
+                                    const speed = data.speed || 0;
+                                    const eta = data.eta || '计算中...';
+                                    const completed = data.completed || 0;
+                                    const total = data.total || 0;
+                                    const path = data.path || '';
+                                    const message = data.message || '';
+                                    
+                                    let statusText = `正在下载 ${modelName}... ${data.progress.toFixed(1)}%`;
+                                    if (message && message !== 'downloading') {
+                                        statusText += ` (${message})`;
+                                    }
+                                    
+                                    downloadLabel.innerHTML = statusText + '<br>' +
+                                        `<small style="color: #666;">` +
+                                        `速度: ${speed.toFixed(2)} MB/s | 剩余: ${eta}<br>` +
+                                        `进度: ${completed.toFixed(2)} / ${total.toFixed(2)} MB<br>` +
+                                        `保存路径: ${path}` +
+                                        `</small>`;
+                                } else if (data.status === 'success') {
+                                    progressBar.style.width = '100%';
+                                    const message = data.message || '下载完成！';
+                                    // 检查是否是已存在的消息（包括英文和中文）
+                                    const isAlreadyExists = message === 'already exists' || 
+                                                           message.includes('已存在') ||
+                                                           message.includes('无需下载');
+                                    downloadLabel.textContent = isAlreadyExists ? '模型已存在！' : '下载完成！';
+                                    setTimeout(() => {
+                                        progressDiv.classList.add('hidden');
+                                        isDownloading = false;
+                                        checkOllamaStatus();
+                                    }, 1000);
+                                } else if (data.status === 'error') {
+                                    downloadLabel.textContent = `下载失败: ${data.message || '未知错误'}`;
+                                    setTimeout(() => {
+                                        progressDiv.classList.add('hidden');
+                                        isDownloading = false;
+                                    }, 3000);
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    downloadLabel.textContent = '下载已取消';
+                    setTimeout(() => {
+                        progressDiv.classList.add('hidden');
+                    }, 1500);
+                } else {
+                    downloadLabel.textContent = `下载失败: ${error.message}`;
+                    setTimeout(() => {
+                        progressDiv.classList.add('hidden');
+                    }, 3000);
+                }
+                console.error('下载失败:', error);
+            } finally {
+                isDownloading = false;
+                downloadAbortController = null;
+            }
+        }
+
+        function cancelDownload() {
+            if (downloadAbortController && isDownloading) {
+                downloadAbortController.abort();
+                const cancelBtn = document.getElementById('cancelDownloadBtn');
+                const downloadLabel = document.getElementById('downloadLabel');
+                cancelBtn.disabled = true;
+                downloadLabel.textContent = '正在取消...';
+            }
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return '-';
+            const gb = bytes / (1024 * 1024 * 1024);
+            if (gb >= 1) return gb.toFixed(1) + ' GB';
+            const mb = bytes / (1024 * 1024);
+            return mb.toFixed(1) + ' MB';
+        }
+
+        function showAlert(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+
+        function clearAlert(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showAlert('uploadResult', '<span class="loading"></span> 正在解析文献...', 'info');
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    parsedRecords = data.preview;
+                    showAlert('uploadResult', data.message, 'success');
+
+                    const previewSection = document.getElementById('previewSection');
+                    const previewTable = document.getElementById('previewTable');
+
+                    const headers = Object.keys(data.preview[0]);
+                    previewTable.querySelector('thead').innerHTML = `
+                        <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                    `;
+
+                    previewTable.querySelector('tbody').innerHTML = data.preview.map(record => `
+                        <tr>${headers.map(h => `<td class="text-truncate" title="${record[h] || ''}">${record[h] || ''}</td>`).join('')}</tr>
+                    `).join('');
+
+                    previewSection.classList.remove('hidden');
+
+                    // 更新右侧统计
+                    document.getElementById('totalCount').textContent = data.total;
+                    document.getElementById('currentIndex').textContent = `0 / ${data.total}`;
+
+                    // 启用按钮
+                    if (currentModels.length > 0) {
+                        document.getElementById('analyzeBtn').disabled = false;
+                        document.getElementById('exportBtn').disabled = false;
+                    }
+                } else {
+                    showAlert('uploadResult', data.error || '上传失败', 'error');
+                }
+            } catch (error) {
+                showAlert('uploadResult', '上传失败: ' + error.message, 'error');
+            }
+        }
+
+        // AI平台配置
+        const AI_PLATFORMS = {
+            doubao: {
+                name: '豆包',
+                url: 'https://www.doubao.com',
+                color: '#667eea'
+            },
+            zhipu: {
+                name: '智谱清言',
+                url: 'https://chatglm.cn',
+                color: '#1a5f7a'
+            },
+            deepseek: {
+                name: 'DeepSeek',
+                url: 'https://chat.deepseek.com',
+                color: '#4a5568'
+            },
+            kimi: {
+                name: 'Kimi',
+                url: 'https://kimi.moonshot.cn',
+                color: '#10b981'
+            },
+            qwen: {
+                name: '通义千问',
+                url: 'https://tongyi.aliyun.com',
+                color: '#8b5cf6'
+            },
+            yiyan: {
+                name: '文心一言',
+                url: 'https://yiyan.baidu.com',
+                color: '#3b82f6'
+            }
+        };
+
+        // 生成完整的AI优化提示词
+        function generateFullPrompt() {
+            const criteria = document.getElementById('userCriteria').value.trim();
+            const promptBox = document.getElementById('fullPromptText');
+            
+            if (!criteria) {
+                promptBox.textContent = '请先在上方的"输入筛选标准"框中输入您的筛选标准...';
+                promptBox.classList.add('placeholder');
+                return;
+            }
+            
+            promptBox.classList.remove('placeholder');
+            
+            const fullPrompt = `你是一位专业的文献筛选专家。请帮我优化以下筛选标准，使其更加精确、清晰、易于被AI理解。
+
+═══════════════════════════════════════
+【优化要求】
+═══════════════════════════════════════
+
+1. 分析用户的筛选意图，转化为专业、精确的学术术语
+2. 将模糊的自然语言转化为清晰的判断标准
+3. 逻辑结构清晰，无歧义
+4. 保留用户原始意图的所有关键点
+5. 用中文输出优化后的筛选标准
+
+═══════════════════════════════════════
+【我的筛选标准】
+═══════════════════════════════════════
+
+${criteria}
+
+═══════════════════════════════════════
+【请输出】
+═══════════════════════════════════════
+
+请直接输出优化后的筛选标准描述，不要有任何解释。优化后的内容应该更专业、更清晰、更易于AI理解。`;
+
+            promptBox.textContent = fullPrompt;
+        }
+
+        // 一键复制完整提示词
+        async function copyFullPrompt() {
+            const promptText = document.getElementById('fullPromptText').textContent;
+            const copyBtn = document.querySelector('.btn-copy-small');
+            
+            if (promptText.includes('请先在上方')) {
+                alert('请先输入筛选标准');
+                return;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(promptText);
+                copyBtn.textContent = '✓ 已复制';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.textContent = '一键复制';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                // 降级方案
+                const range = document.createRange();
+                range.selectNode(document.getElementById('fullPromptText'));
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                
+                copyBtn.textContent = '✓ 已复制';
+                setTimeout(() => {
+                    copyBtn.textContent = '一键复制';
+                }, 2000);
+            }
+        }
+
+        // 打开AI平台
+        function openAIPlatform(platform) {
+            const platformInfo = AI_PLATFORMS[platform];
+            const criteria = document.getElementById('userCriteria').value.trim();
+            
+            if (!criteria) {
+                alert('请先输入筛选标准');
+                return;
+            }
+            
+            if (!platformInfo) {
+                alert('未知平台');
+                return;
+            }
+            
+            // 先尝试复制提示词
+            copyFullPrompt();
+            
+            // 打开AI平台
+            window.open(platformInfo.url, '_blank');
+        }
+
+        async function startAnalysis() {
+            const prompt = document.getElementById('enhancedPrompt').value;
+            const model = document.getElementById('selectedModel').value;
+
+            if (!prompt) {
+                alert('请先生成筛选提示词');
+                return;
+            }
+
+            if (!model) {
+                alert('请先选择模型');
+                return;
+            }
+
+            isAnalyzing = true;
+            analysisResults = [];
+            const btn = document.getElementById('analyzeBtn');
+            btn.innerHTML = '<span class="loading"></span> 分析中...';
+            btn.disabled = true;
+
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = '';
+
+            // 重置统计
+            document.getElementById('yesCount').textContent = '0';
+            document.getElementById('noCount').textContent = '0';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('analysisProgressBar').style.width = '0%';
+            document.getElementById('etaText').textContent = '准备分析...';
+
+            try {
+                console.log('[分析] 开始发送请求');
+                const response = await fetch('/screen_papers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        model: model
+                    })
+                });
+                console.log('[分析] 收到响应:', response.status);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        console.log('[分析] 流结束');
+                        break;
+                    }
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                console.log('[分析] 收到数据:', data.type);
+
+                                if (data.type === 'start') {
+                                    // 开始分析
+                                    document.getElementById('totalCount').textContent = data.total;
+                                    document.getElementById('currentIndex').textContent = `0 / ${data.total}`;
+                                }
+                                else if (data.type === 'progress') {
+                                    // 当前正在分析的进度
+                                    const progress = Math.round((data.current / data.total) * 100);
+                                    document.getElementById('progressPercent').textContent = progress + '%';
+                                    document.getElementById('analysisProgressBar').style.width = progress + '%';
+                                    document.getElementById('currentIndex').textContent = `${data.current} / ${data.total}`;
+                                    
+                                    // 根据状态显示不同文本
+                                    let statusText = `正在分析第 ${data.current} 篇...`;
+                                    if (data.status === 'loading') {
+                                        statusText = '模型首次加载中，请耐心等待（可能需要1-3分钟）...';
+                                    }
+                                    document.getElementById('etaText').textContent = statusText;
+
+                                    // 添加或更新当前分析项到日志
+                                    const existingItem = document.getElementById(`log-item-${data.current}`);
+                                    if (existingItem) {
+                                        existingItem.querySelector('.log-title').textContent = data.title;
+                                    } else {
+                                        const logItem = document.createElement('div');
+                                        logItem.id = `log-item-${data.current}`;
+                                        logItem.className = 'log-item analyzing';
+                                        logItem.innerHTML = `
+                                            <div class="log-index">${data.current}</div>
+                                            <div class="log-title">${data.title}</div>
+                                            <div class="log-result analyzing">分析中...</div>
+                                        `;
+                                        logContainer.appendChild(logItem);
+                                        // 只滚动日志容器，不滚动整个页面
+                                        logContainer.scrollTop = logContainer.scrollHeight;
+                                    }
+                                }
+                                else if (data.type === 'result') {
+                                    // 单篇分析结果
+                                    const result = data.data;
+                                    analysisResults.push(result);
+
+                                    // 确定结果类型
+                                    let resultClass = '';
+                                    let logClass = '';
+                                    if (result.result === '是') {
+                                        resultClass = 'yes';
+                                        logClass = 'yes';
+                                    } else if (result.result === '否') {
+                                        resultClass = 'no';
+                                        logClass = 'no';
+                                    } else {
+                                        resultClass = 'unknown';
+                                        logClass = 'unknown';
+                                    }
+
+                                    // 更新日志项显示结果
+                                    const logItem = document.getElementById(`log-item-${result.index}`);
+                                    if (logItem) {
+                                        logItem.className = `log-item ${resultClass}`;
+                                        // 解析 raw_response 提取分类依据、原因和结果
+                                        const rawResponse = result.raw_response || '';
+                                        let basis = '', reason = '', classificationResult = result.result;
+                                        
+                                        // 提取【分类依据】
+                                        const basisMatch = rawResponse.match(/【分类依据】\s*\n?([^【]+)/);
+                                        if (basisMatch) basis = basisMatch[1].trim();
+                                        
+                                        logItem.innerHTML = `
+                                            <div class="log-header">
+                                                <div class="log-index log-${logClass}">${result.index}</div>
+                                                <div class="log-title">${result.title}</div>
+                                                <div class="log-result result-${resultClass}">${result.result}</div>
+                                                <button class="btn-expand" onclick="toggleLogDetails(${result.index})">详情</button>
+                                            </div>
+                                            <div class="log-details" id="log-details-${result.index}">
+                                                <div class="log-details-content">${rawResponse || '暂无分析详情'}</div>
+                                            </div>
+                                        `;
+                                    }
+
+                                    // 更新统计
+                                    const yesCount = analysisResults.filter(r => r.result === '是').length;
+                                    const noCount = analysisResults.filter(r => r.result === '否').length;
+                                    const unknownCount = analysisResults.filter(r => r.result === '未知').length;
+                                    document.getElementById('yesCount').textContent = yesCount;
+                                    document.getElementById('noCount').textContent = noCount;
+                                    document.getElementById('unknownCount').textContent = unknownCount;
+                                }
+                                else if (data.type === 'ai_interaction') {
+                                    // AI交互内容 - 发送到抽屉
+                                    if (data.interaction_type === 'send') {
+                                        addAIInteraction(data.paper_id, 'send', data.content, data.label);
+                                    } else if (data.interaction_type === 'receive') {
+                                        addAIInteraction(data.paper_id, 'receive', data.content, data.label);
+                                    }
+                                }
+                                else if (data.type === 'complete') {
+                                    // 分析完成
+                                    document.getElementById('progressPercent').textContent = '100%';
+                                    document.getElementById('analysisProgressBar').style.width = '100%';
+                                    document.getElementById('etaText').textContent = '分析完成';
+                                    
+                                    // 结束流式显示
+                                    finalizeStreaming();
+
+                                    // 显示下载按钮
+                                    document.getElementById('downloadSection').classList.remove('hidden');
+                                    document.getElementById('resultDownloadUrl').value = data.download_url;
+
+                                    // 更新最终统计
+                                    document.getElementById('yesCount').textContent = data.summary.yes;
+                                    document.getElementById('noCount').textContent = data.summary.no;
+                                    document.getElementById('unknownCount').textContent = data.summary.unknown || 0;
+                                }
+                            } catch (e) {
+                                console.error('解析数据失败:', e);
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('[分析] 错误:', error);
+                alert('分析失败: ' + error.message);
+            } finally {
+                isAnalyzing = false;
+                btn.innerHTML = '<span>▶</span> 开始分析';
+                btn.disabled = false;
+            }
+        }
+
+        // 切换日志详情展开/收起
+        function toggleLogDetails(index) {
+            const details = document.getElementById(`log-details-${index}`);
+            if (details) {
+                details.classList.toggle('expanded');
+            }
+        }
+
+        // 切换单个栏目内容的展开/收起
+        function toggleSectionContent(label, contentId) {
+            const content = document.getElementById(contentId);
+            if (content) {
+                content.classList.toggle('expanded');
+                label.classList.toggle('collapsed');
+            }
+        }
+
+        async function exportWithoutAnalysis() {
+            if (!parsedRecords || parsedRecords.length === 0) {
+                alert('请先上传文献文件');
+                return;
+            }
+            
+            const btn = document.getElementById('exportBtn');
+            btn.innerHTML = '<span class="loading"></span> 导出中...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/export_parsed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = data.download_url;
+                } else {
+                    alert(data.error || '导出失败');
+                }
+            } catch (error) {
+                alert('导出失败: ' + error.message);
+            } finally {
+                btn.innerHTML = '<span>📥</span> 不分析导出Excel';
+                btn.disabled = false;
+            }
+        }
+
+        function downloadResult() {
+            const url = document.getElementById('resultDownloadUrl').value;
+            if (url) {
+                window.location.href = url;
+            }
+        }
+
+        // ===== AI交互抽屉功能 =====
+        let aiInteractionCount = 0;
+        let currentStreamingElement = null;
+
+        function toggleAIInteractionDrawer() {
+            const drawer = document.getElementById('aiInteractionDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+            drawer.classList.toggle('open');
+            overlay.classList.toggle('open');
+            
+            // 清除badge
+            if (drawer.classList.contains('open')) {
+                const badge = document.querySelector('.drawer-toggle-btn .badge');
+                if (badge) {
+                    badge.style.display = 'none';
+                    aiInteractionCount = 0;
+                }
+            }
+        }
+
+        function closeAIInteractionDrawer() {
+            const drawer = document.getElementById('aiInteractionDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+            drawer.classList.remove('open');
+            overlay.classList.remove('open');
+        }
+
+        function addAIInteraction(paperId, type, content, label = '') {
+            const container = document.getElementById('aiInteractionContent');
+            const time = new Date().toLocaleTimeString('zh-CN');
+            
+            const item = document.createElement('div');
+            item.className = `interaction-item ${type}`;
+            item.innerHTML = `
+                <div class="interaction-header">
+                    <span class="interaction-paper-id">#${paperId}</span>
+                    <span class="interaction-type ${type}">${type === 'send' ? '📤 发送' : '📥 接收'}</span>
+                    <span class="interaction-time">${time}</span>
+                </div>
+                <div class="interaction-content">
+                    ${label ? `<div class="interaction-label">${label}</div>` : ''}
+                    <div class="interaction-text ${type === 'receive' ? 'streaming' : ''}">${escapeHtml(content)}</div>
+                </div>
+            `;
+            
+            container.appendChild(item);
+            container.scrollTop = container.scrollHeight;
+            
+            // 更新badge
+            const drawer = document.getElementById('aiInteractionDrawer');
+            if (!drawer.classList.contains('open')) {
+                aiInteractionCount++;
+                const badge = document.querySelector('.drawer-toggle-btn .badge');
+                if (badge) {
+                    badge.textContent = aiInteractionCount;
+                    badge.style.display = 'inline-block';
+                }
+            }
+            
+            // 如果是接收类型，保存引用以便流式更新
+            if (type === 'receive') {
+                currentStreamingElement = item.querySelector('.interaction-text');
+            }
+            
+            return item;
+        }
+
+        function updateStreamingContent(content) {
+            if (currentStreamingElement) {
+                currentStreamingElement.textContent = content;
+                const container = document.getElementById('aiInteractionContent');
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function finalizeStreaming() {
+            if (currentStreamingElement) {
+                currentStreamingElement.classList.remove('streaming');
+                currentStreamingElement = null;
+            }
+        }
+
+        function clearAIInteractions() {
+            const container = document.getElementById('aiInteractionContent');
+            container.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">等待AI交互...</div>';
+            aiInteractionCount = 0;
+            currentStreamingElement = null;
+            const badge = document.querySelector('.drawer-toggle-btn .badge');
+            if (badge) badge.style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 监听ESC键关闭抽屉
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAIInteractionDrawer();
+            }
+        });
+    </script>
+
+    <!-- AI交互抽屉 -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeAIInteractionDrawer()"></div>
+    <div class="ai-interaction-drawer" id="aiInteractionDrawer">
+        <div class="drawer-header">
+            <div class="drawer-title">
+                <span>🤖</span>
+                <span>AI交互详情</span>
+            </div>
+            <button class="drawer-close" onclick="closeAIInteractionDrawer()">&times;</button>
+        </div>
+        <div class="drawer-content" id="aiInteractionContent">
+            <div style="text-align: center; color: #999; padding: 40px;">等待AI交互...</div>
+        </div>
+        <div class="drawer-actions">
+            <button class="drawer-btn" onclick="clearAIInteractions()">🗑️ 清空</button>
+            <button class="drawer-btn primary" onclick="closeAIInteractionDrawer()">关闭</button>
+        </div>
+    </div>
+
+    <!-- 抽屉切换按钮 -->
+    <button class="drawer-toggle-btn" onclick="toggleAIInteractionDrawer()">
+        <span>🤖</span>
+        <span>AI交互</span>
+        <span class="badge" style="display: none;">0</span>
+    </button>
+</body>
+</html>
